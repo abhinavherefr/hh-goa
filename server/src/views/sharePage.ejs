@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= brand.eventName %> <%= brand.year %> — Builder Graphic</title>
+
+  <!-- These are what X's (and every other platform's) link-crawler actually reads.
+       They must be server-rendered plain HTML — a client-side React app can't produce
+       these in time for a crawler that doesn't execute JS. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="I'm in for <%= brand.eventName %> <%= brand.year %>" />
+  <meta property="og:description" content="<%= brand.location %> · <%= brand.dates %>. Built with the official frame tool." />
+  <meta property="og:image" content="<%= imageUrl %>" />
+  <meta property="og:image:width" content="<%= imageWidth %>" />
+  <meta property="og:image:height" content="<%= imageHeight %>" />
+  <meta property="og:url" content="<%= shareUrl %>" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="I'm in for <%= brand.eventName %> <%= brand.year %>" />
+  <meta name="twitter:description" content="<%= brand.location %> · <%= brand.dates %>" />
+  <meta name="twitter:image" content="<%= imageUrl %>" />
+  <meta name="twitter:url" content="<%= shareUrl %>" />
+
+  <style>
+    :root {
+      --bg-void: #0E2117;
+      --sand: #F7F3E8;
+      --sand-dim: rgba(247, 243, 232, 0.65);
+      --mustard: #F5DC3E;
+      --pink: #EA3378;
+      --terracotta: #C1602F;
+      --grad: linear-gradient(90deg, var(--mustard), var(--pink));
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg-void);
+      color: var(--sand);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px 60px;
+    }
+    .eyebrow {
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mustard);
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 24px;
+      text-align: center;
+    }
+    img {
+      max-width: min(420px, 100%);
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid rgba(247,243,232,0.15);
+    }
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    a.btn {
+      display: inline-block;
+      padding: 12px 20px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn--primary {
+      background: var(--grad);
+      color: var(--bg-void);
+    }
+    .btn--secondary {
+      color: var(--sand);
+      border: 1px solid rgba(247,243,232,0.3);
+    }
+    footer {
+      margin-top: 40px;
+      font-size: 12px;
+      color: var(--sand-dim);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <img src="<%= clientOrigin %>/LOGO.PNG" alt="<%= brand.eventName %>" style="width:40px;height:40px;object-fit:contain;margin-bottom:16px;border-radius:8px;" />
+  <p class="eyebrow"><%= brand.location %> · <%= brand.dates %></p>
+  <h1>A builder graphic for <%= brand.eventName %> <%= brand.year %></h1>
+
+  <img src="<%= imageUrl %>" alt="<%= brand.eventName %> <%= brand.year %> builder graphic" />
+
+  <div class="actions">
+    <a class="btn btn--primary" href="<%= imageUrl %>" download>Download image</a>
+    <a class="btn btn--secondary" href="<%= clientOrigin %>">Make your own</a>
+  </div>
+
+  <footer>
+    <p><%= brand.hashtag %> · <a href="<%= brand.siteUrl %>" style="color:var(--mustard)"><%= brand.siteUrl %></a></p>
+  </footer>
+</body>
+</html>
