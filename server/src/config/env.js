@@ -11,12 +11,16 @@ function required(name, fallback) {
 }
 
 export const env = {
-  port: Number(process.env.PORT || 4000),
-  mongodbUri: required(
-    "MONGODB_URI",
-    "mongodb+srv://dummy_user:dummy_password@cluster0.mongodb.net/hhg-frame-tool"
-  ),
+  nodeEnv:      process.env.NODE_ENV || "development",
+  port:         process.env.PORT || 4000,
+  mongoUri:     process.env.MONGO_URI || "",
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
-  publicBaseUrl: (process.env.PUBLIC_BASE_URL || "http://localhost:4000").replace(/\/$/, ""),
-  shareTtlHours: Number(process.env.SHARE_TTL_HOURS || 720),
+  publicBaseUrl:(process.env.PUBLIC_BASE_URL || "http://localhost:4000").replace(/\/$/, ""),
+  shareTtlHours:Number(process.env.SHARE_TTL_HOURS || 720),
+
+  // Cloudinary — required for image hosting on Vercel (no persistent disk).
+  // Set these in your Vercel project's Environment Variables dashboard.
+  cloudinaryCloudName: required("CLOUDINARY_CLOUD_NAME"),
+  cloudinaryApiKey:    required("CLOUDINARY_API_KEY"),
+  cloudinaryApiSecret: required("CLOUDINARY_API_SECRET"),
 };

@@ -3,6 +3,8 @@ import {
   COLORS,
   FONT_STACK_DISPLAY,
   FONT_STACK_MONO,
+  THEMES,
+  ROLES,
 } from "../../lib/constants";
 import { drawImageCover } from "../../lib/imageUtils";
 
@@ -23,8 +25,15 @@ const PALETTE = {
  * Renders the square HH Goa profile frame used by CanvasRenderer.
  * Keeps the same transform contract as the card compositor.
  */
-export function renderPfpFrame(ctx, { image, zoom = 1, offsetX = 0, offsetY = 0 }) {
+export function renderPfpFrame(
+  ctx,
+  { image, zoom = 1, offsetX = 0, offsetY = 0, theme = "ocean", role = "BUILDER" }
+) {
   const S = PFP_SIZE;
+  const activeTheme = THEMES[theme] || THEMES.ocean;
+  const roleObj = ROLES.find((r) => r.id === role) || ROLES[0];
+  const roleLabel = roleObj.label.replace(" PASS", "");
+
   ctx.clearRect(0, 0, S, S);
   ctx.save();
   ctx.imageSmoothingEnabled = true;
@@ -32,8 +41,8 @@ export function renderPfpFrame(ctx, { image, zoom = 1, offsetX = 0, offsetY = 0 
 
   drawImageCover(ctx, image, { x: 0, y: 0, w: S, h: S, zoom, offsetX, offsetY });
   drawPhotoOverlay(ctx, S);
-  drawOuterFrame(ctx, S);
-  drawTropicalMarks(ctx, S);
+  drawOuterFrame(ctx, S, activeTheme);
+  drawTropicalMarks(ctx, S, roleLabel, activeTheme);
   drawBrandLockup(ctx, S);
 
   ctx.restore();
@@ -56,13 +65,14 @@ function drawPhotoOverlay(ctx, S) {
   ctx.fillRect(0, 0, S, S);
 }
 
-function drawOuterFrame(ctx, S) {
+function drawOuterFrame(ctx, S, theme) {
   const pad = 42;
+  const ringColors = theme?.frameRing || [PALETTE.mustardLight, PALETTE.cream, PALETTE.pink, PALETTE.forest];
   const ring = ctx.createLinearGradient(0, 0, S, S);
-  ring.addColorStop(0, PALETTE.mustardLight);
-  ring.addColorStop(0.34, PALETTE.cream);
-  ring.addColorStop(0.68, PALETTE.pink);
-  ring.addColorStop(1, PALETTE.forest);
+  ring.addColorStop(0, ringColors[0]);
+  ring.addColorStop(0.34, ringColors[1]);
+  ring.addColorStop(0.68, ringColors[2]);
+  ring.addColorStop(1, ringColors[3]);
 
   ctx.lineWidth = 32;
   ctx.strokeStyle = ring;
@@ -80,7 +90,7 @@ function drawOuterFrame(ctx, S) {
   ctx.stroke();
 }
 
-function drawTropicalMarks(ctx, S) {
+function drawTropicalMarks(ctx, S, roleLabel, theme) {
   ctx.save();
   ctx.lineCap = "round";
   drawSun(ctx, S * 0.82, S * 0.18, 54);
@@ -93,9 +103,17 @@ function drawTropicalMarks(ctx, S) {
   ctx.arc(S * 0.82, S * 0.76, 72, 0.15, Math.PI * 1.45);
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(217,177,59,0.88)";
-  roundedRectPath(ctx, S * 0.67, S * 0.72, 150, 42, 999);
+  // Role Badge pill in bottom right
+  ctx.fillStyle = theme?.accent1 || "rgba(217,177,59,0.88)";
+  roundedRectPath(ctx, S * 0.65, S * 0.72, 180, 48, 999);
   ctx.fill();
+
+  ctx.fillStyle = "#082C23";
+  ctx.font = `800 20px ${FONT_STACK_MONO}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(roleLabel, S * 0.65 + 90, S * 0.72 + 24);
+
   ctx.restore();
 }
 

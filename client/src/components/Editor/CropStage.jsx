@@ -12,6 +12,7 @@ import { useCallback, useRef, useState } from "react";
 export default function CropStage({ transform, onChange, children }) {
   const surfaceRef = useRef(null);
   const dragState = useRef(null);
+  const touchPinchState = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const onPointerDown = useCallback(
@@ -50,6 +51,42 @@ export default function CropStage({ transform, onChange, children }) {
     setIsDragging(false);
   }, []);
 
+  const onTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchPinchState.current = {
+        initialDist: dist,
+        initialZoom: transform.zoom,
+      };
+    }
+  }, [transform.zoom]);
+
+  const onTouchMove = useCallback((e) => {
+    if (e.touches.length === 2 && touchPinchState.current) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const ratio = dist / touchPinchState.current.initialDist;
+      const newZoom = clamp(touchPinchState.current.initialZoom * ratio, 1, 2.5);
+      onChange({ ...transform, zoom: Number(newZoom.toFixed(2)) });
+    }
+  }, [onChange, transform]);
+
+  const onTouchEnd = useCallback(() => {
+    touchPinchState.current = null;
+  }, []);
+
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    const newZoom = clamp(transform.zoom + delta, 1, 2.5);
+    onChange({ ...transform, zoom: Number(newZoom.toFixed(2)) });
+  }, [onChange, transform]);
+
   return (
     <div className="crop-stage">
       <div
@@ -59,6 +96,10 @@ export default function CropStage({ transform, onChange, children }) {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onWheel={onWheel}
       >
         {children}
       </div>
@@ -74,7 +115,7 @@ export default function CropStage({ transform, onChange, children }) {
           onChange={(e) => onChange({ ...transform, zoom: Number(e.target.value) })}
         />
       </label>
-      <p className="crop-stage__hint">Drag the photo to reposition it</p>
+      <p className="crop-stage__hint">Drag or pinch the photo to reposition & zoom</p>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { env } from "./config/env.js";
 import apiRoutes from "./routes/index.js";
 import sharePageRoutes from "./routes/sharePage.routes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
-import { getUploadsDir } from "./services/storage.service.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,20 +16,22 @@ export function createApp() {
   app.set("views", path.join(__dirname, "views"));
   app.set("trust proxy", 1); // needed for correct client IPs behind a reverse proxy (rate limiting)
 
+  // Allow requests from the deployed frontend origin AND localhost for local dev.
+  // CLIENT_ORIGIN is set to the Vercel deployment URL in production.
+  const allowedOrigins = new Set([
+    env.clientOrigin,
+    "http://localhost:5173",
+    "http://localhost:4000",
+  ]);
+
   app.use(
     cors({
-      origin: env.clientOrigin,
+      origin: (origin, callback) => {
+        // Allow same-origin requests (e.g. the EJS share page) and whitelisted origins.
+        if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      },
       methods: ["GET", "POST"],
-    })
-  );
-
-  // Serve generated images. Cached aggressively since filenames are content-addressed (random IDs),
-  // never reused, so a long cache lifetime is always safe.
-  app.use(
-    "/uploads",
-    express.static(getUploadsDir(), {
-      maxAge: "30d",
-      immutable: true,
     })
   );
 

@@ -8,11 +8,12 @@ import { renderBuilderCard, CARD_W, CARD_H } from "./badgeCompositor";
  * no separate "preview vs export" render path to keep in sync.
  */
 const CanvasRenderer = forwardRef(function CanvasRenderer(
-  { format, image, transform, fields },
+  { format, image, transform, fields, theme = "ocean", role = "BUILDER" },
   ref
 ) {
   const canvasRef = useRef(null);
   const [logoImage, setLogoImage] = useState(null);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
   const dims = format === "card" ? { w: CARD_W, h: CARD_H } : { w: PFP_SIZE, h: PFP_SIZE };
 
@@ -25,6 +26,10 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     logo.onload = () => setLogoImage(logo);
     logo.onerror = () => setLogoImage(null);
     logo.src = "/LOGO.PNG";
+
+    if (document.fonts) {
+      document.fonts.ready.then(() => setFontsLoaded(true));
+    }
   }, []);
 
   useEffect(() => {
@@ -33,11 +38,11 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     const ctx = canvas.getContext("2d");
 
     if (format === "card") {
-      renderBuilderCard(ctx, { image, ...transform, ...fields, logoImage });
+      renderBuilderCard(ctx, { image, ...transform, ...fields, logoImage, theme, role });
     } else {
-      renderPfpFrame(ctx, { image, ...transform });
+      renderPfpFrame(ctx, { image, ...transform, theme, role });
     }
-  }, [format, image, transform, fields, logoImage]);
+  }, [format, image, transform, fields, logoImage, fontsLoaded, theme, role]);
 
   return (
     <canvas

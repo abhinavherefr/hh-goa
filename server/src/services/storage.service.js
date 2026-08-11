@@ -1,23 +1,38 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { v2 as cloudinary } from "cloudinary";
+import { env } from "../config/env.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
+// Configure once on module load. Credentials come from Vercel env vars.
+cloudinary.config({
+  cloud_name: env.cloudinaryCloudName,
+  api_key:    env.cloudinaryApiKey,
+  api_secret: env.cloudinaryApiSecret,
+  secure:     true,
+});
 
 /**
- * Local-disk storage adapter. Swap this file's implementation for an S3/Cloudinary/GCS
- * client if deploying somewhere with an ephemeral filesystem (most serverless/PaaS
- * targets wipe local disk between deploys or instances) — the interface
- * (saveBuffer/getPublicPath) is what the rest of the app depends on, not the internals.
+ * Uploads a raw image buffer to Cloudinary and returns the public URL.
+ * Returns { url: string, publicId: string }.
+ *
+ * This replaces the previous local-disk adapter (fs.writeFile) which can't
+ * work on Vercel's read-only / ephemeral filesystem.
  */
 export async function saveBuffer(filename, buffer) {
-  await fs.mkdir(UPLOADS_DIR, { recursive: true });
-  const filepath = path.join(UPLOADS_DIR, filename);
-  await fs.writeFile(filepath, buffer);
-  return filepath;
-}
+  // Strip the extension — Cloudinary uses publicId as the identifier.
+  const publicId = `hh-goa-2026/${filename.replace(/\.[^/.]+$/, "")}`;
 
-export function getUploadsDir() {
-  return UPLOADS_DIR;
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id:     publicId,
+        resource_type: "image",
+        format:        "png",
+        overwrite:     true,
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve({ url: result.secure_url, publicId: result.public_id });
+      }
+    );
+    stream.end(buffer);
+  });
 }

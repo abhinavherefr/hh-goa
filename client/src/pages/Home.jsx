@@ -1,103 +1,10 @@
-// import { useMemo, useRef, useState } from "react";
-// import UploadDropzone from "../components/Upload/UploadDropzone";
-// import FormatToggle from "../components/Editor/FormatToggle";
-// import CropStage from "../components/Editor/CropStage";
-// import BuilderFieldsForm from "../components/Editor/BuilderFieldsForm";
-// import CanvasRenderer from "../components/Canvas/CanvasRenderer";
-// import ResultPreview from "../components/Result/ResultPreview";
-// import ErrorBanner from "../components/common/ErrorBanner";
-// import Spinner from "../components/common/Spinner";
-// import { useImageUpload } from "../hooks/useImageUpload";
-// import { useCanvasExport } from "../hooks/useCanvasExport";
-// import { useShareFlow } from "../hooks/useShareFlow";
-// import { generateBuilderTitle, BRAND } from "../lib/constants";
-
-// export default function Home() {
-//   const { image, transform, setTransform, loadFile, isDecoding, reset } = useImageUpload();
-//   const [format, setFormat] = useState("pfp");
-//   const [fields, setFields] = useState({ name: "", stack: "" });
-//   const [error, setError] = useState(null);
-
-//   const canvasRef = useRef(null);
-//   const { getBlob, download } = useCanvasExport(canvasRef);
-//   const { shareToX, status: shareStatus, error: shareError } = useShareFlow(getBlob, format);
-
-//   const resolvedFields = useMemo(
-//     () => ({ ...fields, builderTitle: generateBuilderTitle(fields.stack) }),
-//     [fields]
-//   );
-
-//   return (
-//     <main className="page">
-//       <header className="page__header">
-//         <div className="page__brand">
-//           <img src="/LOGO.PNG" alt={`${BRAND.eventName} logo`} className="page__logo" />
-//           <span className="page__brand-name">{BRAND.eventName} · {BRAND.year}</span>
-//         </div>
-//         <div className="page__tide" aria-hidden="true" />
-//         <span className="eyebrow">{BRAND.location} · {BRAND.dates}</span>
-//         <h1>Frame yourself in for {BRAND.eventName} {BRAND.year}</h1>
-//         <p className="page__subhead">
-//           Upload a photo, get a branded graphic in seconds, share it with {BRAND.hashtag}.
-//         </p>
-//       </header>
-
-//       <ErrorBanner message={error} onDismiss={() => setError(null)} />
-
-//       {!image && (
-//         <section aria-label="Step 1 — Upload">
-//           <p className="step-label">01 — Upload</p>
-//           <UploadDropzone onImageReady={loadFile} onError={setError} />
-//           {isDecoding && <Spinner label="Reading your photo…" />}
-//         </section>
-//       )}
-
-//       {image && (
-//         <section aria-label="Step 2 — Customize and get your graphic">
-//           <p className="step-label">02 — Customize</p>
-
-//           <FormatToggle value={format} onChange={setFormat} />
-
-//           {format === "card" && <BuilderFieldsForm fields={fields} onChange={setFields} />}
-
-//           <CropStage transform={transform} onChange={setTransform}>
-//             <CanvasRenderer
-//               ref={canvasRef}
-//               format={format}
-//               image={image}
-//               transform={transform}
-//               fields={resolvedFields}
-//             />
-//           </CropStage>
-
-//           <ResultPreview
-//             onDownload={() => download(format === "card" ? "hh-goa-builder-card.png" : "hh-goa-pfp.png")}
-//             onShare={shareToX}
-//             shareStatus={shareStatus}
-//             shareError={shareError}
-//           />
-
-//           <button type="button" className="btn btn--ghost" onClick={reset}>
-//             Start over with a different photo
-//           </button>
-//         </section>
-//       )}
-
-//       <footer className="page__footer">
-//         <p>No login. No signup. Your photo never leaves your device until you hit Share.</p>
-//         <span className="page__footer-hashtag">{BRAND.hashtag}</span>
-//       </footer>
-//     </main>
-//   );
-// }
-
-
-
 import { useMemo, useRef, useState } from "react";
 import UploadDropzone from "../components/Upload/UploadDropzone";
 import FormatToggle from "../components/Editor/FormatToggle";
 import CropStage from "../components/Editor/CropStage";
 import BuilderFieldsForm from "../components/Editor/BuilderFieldsForm";
+import ThemeSelector from "../components/Editor/ThemeSelector";
+import RoleSelector from "../components/Editor/RoleSelector";
 import CanvasRenderer from "../components/Canvas/CanvasRenderer";
 import ResultPreview from "../components/Result/ResultPreview";
 import ErrorBanner from "../components/common/ErrorBanner";
@@ -117,7 +24,10 @@ export default function Home() {
     reset,
   } = useImageUpload();
 
+  const [cloudinaryResult, setCloudinaryResult] = useState(null);
   const [format, setFormat] = useState("pfp");
+  const [theme, setTheme] = useState("ocean");
+  const [role, setRole] = useState("BUILDER");
   const [fields, setFields] = useState({
     name: "",
     stack: "",
@@ -126,7 +36,7 @@ export default function Home() {
 
   const canvasRef = useRef(null);
 
-  const { getBlob, download } = useCanvasExport(canvasRef);
+  const { getBlob, download, copyToClipboard, nativeShare } = useCanvasExport(canvasRef);
 
   const {
     shareToX,
@@ -145,6 +55,37 @@ export default function Home() {
   const handleFormatChange = (nextFormat) => {
     setFormat(nextFormat);
     setError(null);
+  };
+
+  // Cloudinary Integration Handler
+  // Replace handleImageReady in client/src/pages/Home.jsx with this:
+
+  const handleImageReady = (data) => {
+    if (data && data.imageUrl) {
+      setCloudinaryResult(data);
+
+      // Create an image object and set image state safely
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = data.imageUrl;
+
+      img.onload = () => {
+        loadFile(img);
+      };
+
+      img.onerror = () => {
+        // Fallback: If Cloudinary image has CORS issues in local canvas,
+        // load the raw source image directly into canvas preview
+        setError("Cloudinary loaded! Rendering preview...");
+      };
+    } else if (data instanceof File || data instanceof Blob) {
+      loadFile(data);
+    }
+  };
+
+  const handleReset = () => {
+    setCloudinaryResult(null);
+    reset();
   };
 
   return (
@@ -252,7 +193,7 @@ export default function Home() {
               </div>
 
               <UploadDropzone
-                onImageReady={loadFile}
+                onImageReady={handleImageReady}
                 onError={setError}
               />
 
@@ -298,7 +239,7 @@ export default function Home() {
               <button
                 type="button"
                 className="editor__reset"
-                onClick={reset}
+                onClick={handleReset}
               >
                 <span>×</span>
                 Change photo
@@ -308,14 +249,19 @@ export default function Home() {
             {/* Format selector */}
             <div className="editor__format">
               <div className="editor__section-label">
-                <span>FORMAT</span>
-                <span>CHOOSE YOUR FRAME</span>
+                <span>FORMAT & STYLE</span>
+                <span>CUSTOMIZE FRAME & LEVEL</span>
               </div>
 
               <FormatToggle
                 value={format}
                 onChange={handleFormatChange}
               />
+
+              <div className="editor__selectors">
+                <ThemeSelector value={theme} onChange={setTheme} />
+                <RoleSelector value={role} onChange={setRole} />
+              </div>
             </div>
 
             {/* Builder card fields */}
@@ -337,7 +283,7 @@ export default function Home() {
             <div className="editor__preview">
               <div className="editor__section-label">
                 <span>PREVIEW</span>
-                <span>DRAG · ZOOM · FRAME</span>
+                <span>DRAG · PINCH · FRAME</span>
               </div>
 
               <CropStage
@@ -350,6 +296,8 @@ export default function Home() {
                   image={image}
                   transform={transform}
                   fields={resolvedFields}
+                  theme={theme}
+                  role={role}
                 />
               </CropStage>
             </div>
@@ -364,7 +312,15 @@ export default function Home() {
                       : "hh-goa-pfp.png"
                   )
                 }
-                onShare={shareToX}
+                onShare={() => {
+                  if (cloudinaryResult?.shareUrl) {
+                    window.open(cloudinaryResult.shareUrl, "_blank");
+                  } else {
+                    shareToX();
+                  }
+                }}
+                onCopy={copyToClipboard}
+                onNativeShare={nativeShare}
                 shareStatus={shareStatus}
                 shareError={shareError}
               />

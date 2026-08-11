@@ -3,6 +3,8 @@ import {
   COLORS,
   FONT_STACK_DISPLAY,
   FONT_STACK_MONO,
+  THEMES,
+  ROLES,
 } from "../../lib/constants";
 import { drawImageCover } from "../../lib/imageUtils";
 
@@ -62,8 +64,14 @@ export function renderBuilderCard(
     stack,
     builderTitle,
     logoImage,
+    theme = "ocean",
+    role = "BUILDER",
   }
 ) {
+  const activeTheme = THEMES[theme] || THEMES.ocean;
+  const roleObj = ROLES.find((r) => r.id === role) || ROLES[0];
+  const roleLabel = roleObj.label;
+
   const safeName = cleanText(
     name,
     "Unnamed Builder"
@@ -91,12 +99,14 @@ export function renderBuilderCard(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  drawBackground(ctx);
-  drawCard(ctx);
+  drawBackground(ctx, activeTheme);
+  drawCard(ctx, activeTheme);
 
   drawHeader(
     ctx,
-    logoImage
+    logoImage,
+    activeTheme,
+    roleLabel
   );
 
   drawBodyTexture(ctx);
@@ -136,7 +146,7 @@ export function renderBuilderCard(
 /* BACKGROUND                                                                 */
 /* -------------------------------------------------------------------------- */
 
-function drawBackground(ctx) {
+function drawBackground(ctx, theme) {
   const bg = ctx.createLinearGradient(
     0,
     0,
@@ -144,25 +154,12 @@ function drawBackground(ctx) {
     CARD_H
   );
 
-  bg.addColorStop(
-    0,
-    "#F7E9AF"
-  );
+  const colors = theme?.bgGrad || ["#F7E9AF", "#F3D874", "#F2C8C5", "#E9A9C0"];
 
-  bg.addColorStop(
-    0.42,
-    "#F3D874"
-  );
-
-  bg.addColorStop(
-    0.78,
-    "#F2C8C5"
-  );
-
-  bg.addColorStop(
-    1,
-    "#E9A9C0"
-  );
+  bg.addColorStop(0, colors[0]);
+  bg.addColorStop(0.42, colors[1]);
+  bg.addColorStop(0.78, colors[2]);
+  bg.addColorStop(1, colors[3]);
 
   ctx.fillStyle = bg;
 
@@ -173,21 +170,12 @@ function drawBackground(ctx) {
     CARD_H
   );
 
-  /*
-   * Extremely subtle ambient glows.
-   *
-   * NO flowers.
-   * NO petals.
-   * NO leaves.
-   * NO palms.
-   * NO botanical silhouettes.
-   */
   drawSoftGlow(
     ctx,
     900,
     90,
     420,
-    "rgba(245,220,62,0.42)"
+    theme?.accent1 ? `${theme.accent1}44` : "rgba(245,220,62,0.42)"
   );
 
   drawSoftGlow(
@@ -203,7 +191,7 @@ function drawBackground(ctx) {
     930,
     720,
     360,
-    "rgba(234,51,120,0.08)"
+    theme?.accent2 ? `${theme.accent2}22` : "rgba(234,51,120,0.08)"
   );
 }
 
@@ -211,7 +199,7 @@ function drawBackground(ctx) {
 /* CARD CONTAINER                                                             */
 /* -------------------------------------------------------------------------- */
 
-function drawCard(ctx) {
+function drawCard(ctx, theme) {
   drawShadow(
     ctx,
     0,
@@ -229,7 +217,7 @@ function drawCard(ctx) {
     CARD.r
   );
 
-  ctx.fillStyle = C.paper;
+  ctx.fillStyle = theme?.paper || C.paper;
   ctx.fill();
 
   clearShadow(ctx);
@@ -273,10 +261,13 @@ function drawCard(ctx) {
 
 function drawHeader(
   ctx,
-  logoImage
+  logoImage,
+  theme,
+  roleLabel = "BUILDER PASS"
 ) {
   const h = 360;
 
+  const headerGradColors = theme?.headerGrad || ["#1D4A2A", C.forest, "#215A38"];
   const header =
     ctx.createLinearGradient(
       CARD.x,
@@ -285,20 +276,9 @@ function drawHeader(
       CARD.y + h
     );
 
-  header.addColorStop(
-    0,
-    "#1D4A2A"
-  );
-
-  header.addColorStop(
-    0.55,
-    C.forest
-  );
-
-  header.addColorStop(
-    1,
-    "#215A38"
-  );
+  header.addColorStop(0, headerGradColors[0]);
+  header.addColorStop(0.55, headerGradColors[1]);
+  header.addColorStop(1, headerGradColors[2]);
 
   ctx.fillStyle = header;
 
@@ -313,33 +293,13 @@ function drawHeader(
 
   ctx.fill();
 
-  /*
-   * NO decorative flowers.
-   * NO petals.
-   * NO leaves.
-   * NO palms.
-   * NO botanical elements.
-   */
-
   drawLanyardSlot(
     ctx,
     CARD.y + 28
   );
 
-  /*
-   * Shared left alignment guide.
-   *
-   * Logo, divider and footer date all use
-   * this exact same x coordinate.
-   */
-  const leftGuide =
-    CARD.x + 48;
+  const leftGuide = CARD.x + 48;
 
-  /*
-   * LARGE LOGO.
-   *
-   * Current position intentionally preserved.
-   */
   if (logoImage) {
     drawCroppedLogo(
       ctx,
@@ -366,28 +326,21 @@ function drawHeader(
     );
   }
 
-  /*
-   * RIGHT-SIDE ACCESS HIERARCHY.
-   *
-   * Every line shares the exact same right edge.
-   */
-  const rightGuide =
-    CARD.x + CARD.w - 46;
+  const rightGuide = CARD.x + CARD.w - 46;
 
   ctx.textAlign = "right";
   ctx.textBaseline = "alphabetic";
 
   /*
-   * BUILDER PASS
+   * ROLE PASS
    */
-  ctx.fillStyle =
-    C.mustardLight;
+  ctx.fillStyle = theme?.accent1 || C.mustardLight;
 
   ctx.font =
     `900 46px ${FONT_STACK_MONO}`;
 
   ctx.fillText(
-    "BUILDER PASS",
+    roleLabel,
     rightGuide,
     CARD.y + 168
   );

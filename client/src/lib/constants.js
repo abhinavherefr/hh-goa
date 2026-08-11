@@ -10,6 +10,60 @@ export const BRAND = {
   hashtag: "#FrameInGoa",
 };
 
+export const THEMES = {
+  ocean: {
+    id: "ocean",
+    name: "Ocean Tide",
+    paper: "#FFFBF2",
+    headerGrad: ["#1D4A2A", "#2C663A", "#215A38"],
+    accent1: "#F5DC3E", // mustard
+    accent2: "#EA3378", // pink
+    bgGrad: ["#F7E9AF", "#F3D874", "#F2C8C5", "#E9A9C0"],
+    frameRing: ["#FBEB8F", "#F7F3E8", "#EA3378", "#2C663A"],
+    textMuted: "rgba(21,40,27,0.58)",
+  },
+  sunset: {
+    id: "sunset",
+    name: "Goa Sunset",
+    paper: "#FFF8F0",
+    headerGrad: ["#7A1F26", "#C1602F", "#D94E34"],
+    accent1: "#F5DC3E", // mustard
+    accent2: "#EA3378", // pink
+    bgGrad: ["#FCE3B4", "#F9A875", "#EE6C79", "#B24C68"],
+    frameRing: ["#F5DC3E", "#FFF8F0", "#EA3378", "#7A1F26"],
+    textMuted: "rgba(60,15,20,0.58)",
+  },
+  forest: {
+    id: "forest",
+    name: "Palm Forest",
+    paper: "#F4F9F5",
+    headerGrad: ["#112A1D", "#1B4332", "#2D6A4F"],
+    accent1: "#52B788",
+    accent2: "#F5DC3E",
+    bgGrad: ["#D8F3DC", "#B7E4C7", "#95D5B2", "#74C69D"],
+    frameRing: ["#52B788", "#F4F9F5", "#F5DC3E", "#112A1D"],
+    textMuted: "rgba(17,42,29,0.58)",
+  },
+  cyber: {
+    id: "cyber",
+    name: "Cyber Midnight",
+    paper: "#F5F7FA",
+    headerGrad: ["#0F172A", "#1E293B", "#0F172A"],
+    accent1: "#2DD4BF", // teal
+    accent2: "#EA3378", // magenta
+    bgGrad: ["#C7D2FE", "#A5B4FC", "#F472B6", "#38BDF8"],
+    frameRing: ["#2DD4BF", "#F5F7FA", "#EA3378", "#0F172A"],
+    textMuted: "rgba(15,23,42,0.58)",
+  },
+};
+
+export const ROLES = [
+  { id: "BUILDER", label: "BUILDER PASS" },
+  { id: "SPEAKER", label: "SPEAKER PASS" },
+  { id: "HACKER", label: "HACKER PASS" },
+  { id: "SPONSOR", label: "SPONSOR PASS" },
+  { id: "VIP", label: "VIP PASS" },
+];
 
 // Real HH Goa brand palette. This is the source of truth — badgeCompositor.js
 // and frameCompositor.js both read COLORS.* with `|| "#fallback"`, but that

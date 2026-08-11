@@ -6,6 +6,32 @@ export default function UploadDropzone({ onImageReady, onError }) {
   const inputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const uploadToCloudinary = async (file) => {
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    try {
+      const response = await fetch("http://localhost:4000/api/generate-frame", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Pass result data back to parent component
+        onImageReady(data);
+      } else {
+        onError(data.message || "Failed to generate graphic.");
+      }
+    } catch (err) {
+      onError("Server connection error. Ensure your backend server is running.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleFile = useCallback(
     async (file) => {
@@ -19,7 +45,8 @@ export default function UploadDropzone({ onImageReady, onError }) {
           setIsConverting(false);
         }
 
-        onImageReady(workingFile);
+        // Send converted file to Cloudinary backend API
+        await uploadToCloudinary(workingFile);
       } catch (err) {
         setIsConverting(false);
         if (err instanceof ImageValidationError) {
@@ -69,6 +96,8 @@ export default function UploadDropzone({ onImageReady, onError }) {
 
       {isConverting ? (
         <p className="dropzone__label">Converting your photo…</p>
+      ) : isUploading ? (
+        <p className="dropzone__label">Generating your HH Goa 2026 frame…</p>
       ) : (
         <>
           <p className="dropzone__label">Drop a photo, or tap to choose one</p>

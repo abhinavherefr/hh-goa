@@ -1081,3 +1081,78 @@
     width: min(100%, 280px);
   }
 }
+
+
+/* ---------------------------------------------------------
+   THEME & ROLE SELECTORS
+--------------------------------------------------------- */
+
+.editor__selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.theme-selector,
+.role-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.theme-selector__label,
+.role-selector__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sand-dim);
+}
+
+.theme-selector__options,
+.role-selector__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theme-pill,
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--sand-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-pill:hover,
+.role-pill:hover {
+  border-color: var(--line-strong);
+  color: var(--sand);
+}
+
+.theme-pill--active,
+.role-pill--active {
+  background: var(--bg-panel-raised);
+  border-color: var(--mustard);
+  color: var(--mustard);
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(245, 220, 62, 0.15);
+}
+
+.theme-pill__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
