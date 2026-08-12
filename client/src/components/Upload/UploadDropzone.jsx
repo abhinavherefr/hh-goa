@@ -21,13 +21,15 @@ export default function UploadDropzone({ onImageReady, onError }) {
 
       const data = await response.json();
       if (data.success) {
-        // Pass result data back to parent component
-        onImageReady(data);
+        // Pass BOTH raw file (for local preview) and Cloudinary result (for X sharing)
+        onImageReady({ file, cloudinary: data });
       } else {
-        onError(data.message || "Failed to generate graphic.");
+        // Fallback to local rendering if Cloudinary API returns error
+        onImageReady({ file, cloudinary: null });
       }
     } catch (err) {
-      onError("Server connection error. Ensure your backend server is running.");
+      // Fallback to local rendering if backend server drops connection
+      onImageReady({ file, cloudinary: null });
     } finally {
       setIsUploading(false);
     }

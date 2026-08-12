@@ -60,26 +60,12 @@ export default function Home() {
   // Cloudinary Integration Handler
   // Replace handleImageReady in client/src/pages/Home.jsx with this:
 
-  const handleImageReady = (data) => {
-    if (data && data.imageUrl) {
-      setCloudinaryResult(data);
-
-      // Create an image object and set image state safely
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = data.imageUrl;
-
-      img.onload = () => {
-        loadFile(img);
-      };
-
-      img.onerror = () => {
-        // Fallback: If Cloudinary image has CORS issues in local canvas,
-        // load the raw source image directly into canvas preview
-        setError("Cloudinary loaded! Rendering preview...");
-      };
-    } else if (data instanceof File || data instanceof Blob) {
-      loadFile(data);
+  const handleImageReady = (payload) => {
+    if (payload?.file) {
+      setCloudinaryResult(payload.cloudinary);
+      loadFile(payload.file); // Load raw file directly into local canvas hook!
+    } else if (payload instanceof File || payload instanceof Blob) {
+      loadFile(payload);
     }
   };
 

@@ -13,6 +13,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 ) {
   const canvasRef = useRef(null);
   const [logoImage, setLogoImage] = useState(null);
+  const [bgImage, setBgImage] = useState(null); // 1. Add state for the new background
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   const dims = format === "card" ? { w: CARD_W, h: CARD_H } : { w: PFP_SIZE, h: PFP_SIZE };
@@ -22,10 +23,18 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   }));
 
   useEffect(() => {
+    // Load Logo
     const logo = new Image();
     logo.onload = () => setLogoImage(logo);
     logo.onerror = () => setLogoImage(null);
     logo.src = "/LOGO.PNG";
+
+    // 2. Load the new Goa Sunset Background
+    const bg = new Image();
+    bg.onload = () => setBgImage(bg);
+    bg.onerror = () => setBgImage(null);
+    // Make sure this matches the exact filename in your public folder!
+    bg.src = "/ChatGPT Image Aug 12, 2026, 10_06_57 AM.png"; 
 
     if (document.fonts) {
       document.fonts.ready.then(() => setFontsLoaded(true));
@@ -38,11 +47,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     const ctx = canvas.getContext("2d");
 
     if (format === "card") {
-      renderBuilderCard(ctx, { image, ...transform, ...fields, logoImage, theme, role });
+      // 3. Pass the loaded bgImage into the compositor
+      renderBuilderCard(ctx, { image, bgImage, ...transform, ...fields, logoImage, theme, role });
     } else {
       renderPfpFrame(ctx, { image, ...transform, theme, role });
     }
-  }, [format, image, transform, fields, logoImage, fontsLoaded, theme, role]);
+  }, [format, image, transform, fields, logoImage, bgImage, fontsLoaded, theme, role]);
 
   return (
     <canvas

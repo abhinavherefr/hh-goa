@@ -103,7 +103,6 @@ function drawTropicalMarks(ctx, S, roleLabel, theme) {
   ctx.arc(S * 0.82, S * 0.76, 72, 0.15, Math.PI * 1.45);
   ctx.stroke();
 
-  // Role Badge pill in bottom right
   ctx.fillStyle = theme?.accent1 || "rgba(217,177,59,0.88)";
   roundedRectPath(ctx, S * 0.65, S * 0.72, 180, 48, 999);
   ctx.fill();
