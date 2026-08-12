@@ -14,7 +14,7 @@ export default function UploadDropzone({ onImageReady, onError }) {
     formData.append("photo", file);
 
     try {
-      const response = await fetch("http://localhost:4000/api/generate-frame", {
+      const response = await fetch("https://hhg-0qoi.onrender.com/api/generate-frame", {
         method: "POST",
         body: formData,
       });
