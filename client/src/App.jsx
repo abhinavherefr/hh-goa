@@ -1,10 +1,7 @@
-import React from 'react';
-import './App.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Landing from './pages/Landing';
-import CreateChoice from './pages/CreateChoice';
-import SoloBuilder from './pages/SoloBuilder';
-import TeamBuilder from './pages/TeamBuilder';
+import React from "react";
+import "./App.css";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
 
 function App() {
   return (
@@ -12,9 +9,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/create" element={<CreateChoice />} />
-          <Route path="/create/individual" element={<SoloBuilder />} />
-          <Route path="/create/team" element={<TeamBuilder />} />
+          <Route path="/create" element={<Landing />} />
+          <Route path="/create/individual" element={<Landing />} />
+          <Route path="/create/team" element={<Landing />} />
           <Route path="/hype" element={<Landing />} />
         </Routes>
       </BrowserRouter>

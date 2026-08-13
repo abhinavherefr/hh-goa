@@ -1,261 +1,128 @@
-import React from 'react';
-import { EVENT } from '../mock';
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import CanvasRenderer from "./Canvas/CanvasRenderer";
+
+function clamp(v, min, max) {
+  return Math.min(max, Math.max(min, v));
+}
+
+// Loads a plain <img> element from a data URL / URL for canvas drawImage
+function useHtmlImage(src) {
+  const [img, setImg] = useState(null);
+
+  useEffect(() => {
+    if (!src) {
+      setImg(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (!cancelled) setImg(image);
+    };
+    image.onerror = () => {
+      if (!cancelled) setImg(null);
+    };
+    image.src = src;
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return img;
+}
 
 /**
- * FrameCard - renders a builder ID card in one of many styles.
- * Props: frame, name, role, title, team, photo, builderId, zoom, pan, onPanChange, className, thumb
+ * FrameCard — canvas-backed builder ID card / PFP.
  */
-const FrameCard = ({ 
-  frame, 
-  name = 'AARAV', 
-  role = 'BUILDER', 
-  title = '', 
-  team = '', 
-  photo, 
-  builderId = 'HH-26-0000', 
-  zoom = 1, 
-  pan = { x: 0, y: 0 },
-  onPanChange,
-  className = '', 
-  thumb = false 
-}) => {
-  const displayName = (name || 'AARAV').toUpperCase();
-  const displayRole = (role || 'BUILDER').toUpperCase();
+const FrameCard = forwardRef(function FrameCard(
+  {
+    format = "card",
+    name = "UNNAMED BUILDER",
+    role = "BUILDER",
+    title = "",
+    stack = "",
+    photo,
+    zoom = 1,
+    pan = { x: 0, y: 0 },
+    onPanChange,
+    theme = "ocean",
+    className = "",
+    thumb = false,
+  },
+  ref
+) {
+  const canvasRendererRef = useRef(null);
+  const surfaceRef = useRef(null);
+  const image = useHtmlImage(photo);
 
-  if (!frame) return null;
+  useImperativeHandle(ref, () => ({
+    getCanvas: () => canvasRendererRef.current?.getCanvas?.() ?? null,
+  }));
 
-  // Enable dragging only when an image exists and onPanChange handler is passed
   const isInteractive = Boolean(onPanChange && photo && !thumb);
 
   const handlePointerDown = (e) => {
     if (!isInteractive) return;
     e.preventDefault();
-    
-    const startX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-    const startY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    const initialX = pan.x || 0;
-    const initialY = pan.y || 0;
 
-    const handlePointerMove = (moveEvent) => {
-      const currentX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0] ? moveEvent.touches[0].clientX : 0);
-      const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0] ? moveEvent.touches[0].clientY : 0);
-      
-      let newX = initialX + (currentX - startX);
-      let newY = initialY + (currentY - startY);
+    const rect = surfaceRef.current.getBoundingClientRect();
+    const startX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+    const startY = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    const startPan = { x: pan?.x || 0, y: pan?.y || 0 };
 
-      // Relaxed boundaries so the user has plenty of space to drag the cropped overflow
-      const maxPan = 400 * zoom; 
-      
-      if (newX > maxPan) newX = maxPan;
-      if (newX < -maxPan) newX = -maxPan;
-      if (newY > maxPan) newY = maxPan;
-      if (newY < -maxPan) newY = -maxPan;
+    const handleMove = (moveEvent) => {
+      const curX = moveEvent.clientX ?? (moveEvent.touches && moveEvent.touches[0] ? moveEvent.touches[0].clientX : 0);
+      const curY = moveEvent.clientY ?? (moveEvent.touches && moveEvent.touches[0] ? moveEvent.touches[0].clientY : 0);
+      const dx = (curX - startX) / (rect.width || 1);
+      const dy = (curY - startY) / (rect.height || 1);
 
-      onPanChange({ x: newX, y: newY });
+      onPanChange({
+        x: clamp(startPan.x + dx * 2, -1, 1),
+        y: clamp(startPan.y + dy * 2, -1, 1),
+      });
     };
 
-    const handlePointerUp = () => {
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('mouseup', handlePointerUp);
-      window.removeEventListener('touchmove', handlePointerMove);
-      window.removeEventListener('touchend', handlePointerUp);
+    const handleUp = () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleUp);
     };
 
-    window.addEventListener('mousemove', handlePointerMove);
-    window.addEventListener('mouseup', handlePointerUp);
-    window.addEventListener('touchmove', handlePointerMove);
-    window.addEventListener('touchend', handlePointerUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleUp);
   };
 
-  const commonHeader = (
-    <div className="flex items-center justify-between mb-2 pointer-events-none">
-      <div className="flex items-center gap-1.5">
-        <div className="w-6 h-6 bg-hh-yellow rounded-sm border border-hh-green-deep flex items-center justify-center font-display text-[8px] text-hh-green-deep">HH</div>
-        <div className="font-mono text-[7px] leading-tight text-hh-yellow">
-          <div className="font-bold tracking-wider">HACKER HOUSE GOA 2026</div>
-          <div className="text-hh-cream/70 text-[6px]">BUILDER ID</div>
-        </div>
-      </div>
-      <div className="font-mono text-[6px] text-hh-cream/70">{builderId}</div>
-    </div>
-  );
+  const aspectClass = format === "pfp" ? "aspect-square" : "aspect-[2/3]";
 
-  const commonFooter = (
-    <div className="flex items-center justify-between font-mono text-[6px] text-hh-cream/70 mt-2 pt-2 border-t border-hh-cream/20 pointer-events-none">
-      <span>{EVENT.hashtag} · 28–31 OCT 2026</span>
-      <span>GOA, INDIA</span>
-    </div>
-  );
-
-  const photoEl = (shape = 'rect', extraClass = '') => (
-    <div 
+  return (
+    <div
+      ref={surfaceRef}
       onMouseDown={handlePointerDown}
       onTouchStart={handlePointerDown}
-      className={`relative overflow-hidden ${extraClass} bg-hh-green-deep border-2 border-hh-yellow ${
-        shape === 'circle' ? 'rounded-full' : shape === 'arch' ? 'rounded-t-full rounded-b-md' : 'rounded-md'
-      } ${isInteractive ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
+      className={`relative w-full ${aspectClass} overflow-hidden flex items-center justify-center ${
+        isInteractive ? "cursor-grab active:cursor-grabbing select-none" : ""
+      } ${className}`}
     >
-      {photo ? (
-        <img 
-          src={photo} 
-          alt="user photo" 
-          draggable={false}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none" 
-          style={{ 
-            // Using object-position instead of transform-translate stops the edges from showing!
-            objectPosition: `calc(50% + ${pan.x || 0}px) calc(50% + ${pan.y || 0}px)`,
-            transform: `scale(${zoom})` 
-          }} 
-        />
-      ) : (
-        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-70 pointer-events-none">
-          <circle cx="50" cy="40" r="18" fill="#f5edb7" />
-          <path d="M20 100 Q50 65 80 100 Z" fill="#f5edb7" />
-        </svg>
-      )}
+      <CanvasRenderer
+        ref={canvasRendererRef}
+        format={format}
+        image={image}
+        transform={{ zoom, offsetX: pan?.x || 0, offsetY: pan?.y || 0 }}
+        fields={{ name, stack: stack || role, builderTitle: title || undefined }}
+        theme={theme}
+        role={role}
+      />
     </div>
   );
-
-  // ARCH BADGE
-  if (frame.id === 'arch') {
-    return (
-      <div className={`relative w-full aspect-[3/4] p-3 rounded-xl bg-hh-green-deep border-2 border-hh-yellow shadow-[4px_4px_0_#ec2f89] ${className}`}>
-        {commonHeader}
-        {photoEl('arch', 'w-full h-[55%] mx-auto')}
-        <div className="mt-2 text-center pointer-events-none">
-          <div className="font-display text-hh-yellow text-lg leading-none stroked-green" style={{ WebkitTextStroke: '1px #0a3d24' }}>{displayName}</div>
-          <div className="inline-block mt-1 bg-hh-yellow text-hh-green-deep px-2 py-0.5 rounded font-mono text-[8px] font-bold">{displayRole}</div>
-        </div>
-        {commonFooter}
-      </div>
-    );
-  }
-
-  // PORTRAIT FRAME
-  if (frame.id === 'portrait') {
-    return (
-      <div className={`relative w-full aspect-[3/4] p-3 rounded-xl bg-hh-green-deep border-2 border-hh-cream ${className}`}>
-        {commonHeader}
-        {photoEl('rect', 'w-full h-[60%]')}
-        <div className="mt-2 text-center pointer-events-none">
-          <div className="font-display text-hh-yellow text-lg leading-none">{displayName}</div>
-          <div className="font-mono text-[8px] text-hh-cream/70 mt-0.5">{displayRole}</div>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 h-2 bg-hh-pink rounded-b-xl pointer-events-none" />
-      </div>
-    );
-  }
-
-  // ORNATE BADGE
-  if (frame.id === 'ornate') {
-    return (
-      <div className={`relative w-full aspect-[3/4] p-3 rounded-xl bg-hh-green-deep border-4 border-double border-hh-yellow ${className}`}>
-        {commonHeader}
-        <div className="relative w-full h-[55%] p-1.5 border border-hh-yellow/60 rounded-md">
-          {photoEl('rect', 'w-full h-full')}
-        </div>
-        <div className="mt-2 text-center pointer-events-none">
-          <div className="font-display text-hh-yellow text-lg leading-none">{displayName}</div>
-          <div className="font-mono text-[8px] text-hh-cream/70 mt-0.5">✦ {displayRole} ✦</div>
-        </div>
-        {commonFooter}
-      </div>
-    );
-  }
-
-  // SLIM BADGE
-  if (frame.id === 'slim') {
-    return (
-      <div className={`relative w-full aspect-[3/4] p-3 rounded-xl bg-hh-green-deep border-2 border-hh-cream/40 ${className}`}>
-        {commonHeader}
-        {photoEl('arch', 'w-full h-[58%]')}
-        <div className="mt-2 text-center pointer-events-none">
-          <div className="font-display text-hh-yellow text-base leading-none">{displayName}</div>
-          <div className="font-mono text-[7px] text-hh-cream/60 mt-0.5">{displayRole}</div>
-        </div>
-      </div>
-    );
-  }
-
-  // LANDSCAPE FRAME
-  if (frame.id === 'landscape') {
-    return (
-      <div className={`relative w-full aspect-[16/10] p-3 rounded-xl overflow-hidden ${className}`} style={{ background: 'linear-gradient(180deg, #f27e2b 0%, #ec2f89 100%)' }}>
-        <div className="flex items-start justify-between pointer-events-none">
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 bg-hh-yellow rounded-sm border border-hh-green-deep flex items-center justify-center font-display text-[8px] text-hh-green-deep">HH</div>
-            <div className="font-mono text-[7px] leading-tight text-white">
-              <div className="font-bold tracking-wider">HACKER HOUSE GOA 2026</div>
-              <div className="text-white/80 text-[6px]">BUILDER ID</div>
-            </div>
-          </div>
-          <div className="font-mono text-[6px] text-white/80">{builderId}</div>
-        </div>
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex-1 pointer-events-none">
-            <svg viewBox="0 0 60 60" className="w-12 h-12">
-              <circle cx="30" cy="30" r="12" fill="#f9df32" stroke="#0a3d24" strokeWidth="2" />
-              {[0,45,90,135,180,225,270,315].map(a => (
-                <line key={a} x1="30" y1="30" x2={30 + 22 * Math.cos((a * Math.PI) / 180)} y2={30 + 22 * Math.sin((a * Math.PI) / 180)} stroke="#f9df32" strokeWidth="3" strokeLinecap="round" />
-              ))}
-            </svg>
-            <div className="font-display text-white text-base leading-tight mt-1">{displayName}</div>
-            <div className="inline-block mt-1 bg-hh-yellow text-hh-green-deep px-2 py-0.5 rounded font-mono text-[7px] font-bold">{displayRole}</div>
-            <svg viewBox="0 0 200 20" className="w-full mt-2" preserveAspectRatio="none">
-              <path d="M0 10 Q25 0 50 10 T100 10 T150 10 T200 10" stroke="#f9df32" strokeWidth="2" fill="none" />
-              <path d="M0 15 Q25 5 50 15 T100 15 T150 15 T200 15" stroke="#f9df32" strokeWidth="2" fill="none" />
-            </svg>
-          </div>
-          {photoEl('rect', 'w-[38%] aspect-[3/4]')}
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 bg-[#c4d84a] px-3 py-1.5 pointer-events-none">
-          <div className="flex items-center justify-between font-mono text-[6px] text-hh-green-deep">
-            <span>{EVENT.hashtag} · 28–31 OCT 2026 · GOA, INDIA</span>
-            <span>HH OCT 2026</span>
-          </div>
-          <div className="font-display text-hh-green-deep text-lg leading-none text-center opacity-70">GOA 2026</div>
-        </div>
-      </div>
-    );
-  }
-
-  // CIRCLE PFP
-  if (frame.id === 'circle') {
-    return (
-      <div className={`relative w-full aspect-square p-3 rounded-xl bg-hh-green-deep border-2 border-hh-yellow ${className}`}>
-        {commonHeader}
-        <div className="relative w-[70%] mx-auto aspect-square my-2">
-          <div className="absolute inset-0 rounded-full border-4 border-hh-yellow z-10 pointer-events-none" />
-          {photoEl('circle', 'w-full h-full')}
-          <svg viewBox="0 0 100 100" className="absolute -bottom-1 left-0 right-0 w-full z-10 pointer-events-none"><path d="M0 50 Q25 45 50 50 T100 50" stroke="#f9df32" strokeWidth="1" fill="none" /></svg>
-        </div>
-        <div className="text-center mt-1 pointer-events-none">
-          <div className="font-display text-hh-yellow text-base leading-none">{displayName}</div>
-          <div className="font-mono text-[8px] text-hh-cream/70 mt-0.5">{displayRole}</div>
-        </div>
-      </div>
-    );
-  }
-
-  // TALL PFP
-  if (frame.id === 'tall') {
-    return (
-      <div className={`relative w-full aspect-[3/4] p-3 rounded-xl bg-hh-green-deep border-2 border-hh-yellow ${className}`}>
-        <div className="flex items-center justify-between mb-2 pointer-events-none">
-          <div className="w-2 h-2 rounded-full bg-hh-pink" />
-          <div className="font-mono text-[7px] text-hh-yellow">HH · TALL</div>
-          <div className="w-2 h-2 rounded-full bg-hh-yellow" />
-        </div>
-        {photoEl('arch', 'w-full h-[70%]')}
-        <div className="mt-2 text-center pointer-events-none">
-          <div className="font-display text-hh-yellow text-lg leading-none">{displayName}</div>
-          <div className="font-mono text-[8px] text-hh-cream/70 mt-0.5">{displayRole}</div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-};
+});
 
 export default FrameCard;
