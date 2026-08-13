@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run install:all && npm run build:client",
+  "buildCommand": "npm install --prefix client && npm install --prefix server && npm run build --prefix client",
   "outputDirectory": "client/dist",
   "functions": {
     "api/index.js": {
@@ -9,8 +9,8 @@
   },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" },
-    { "source": "/s/:path*",   "destination": "/api/index" },
-    { "source": "/health",     "destination": "/api/index" },
-    { "source": "/:path*",     "destination": "/index.html" }
+    { "source": "/s/:path*", "destination": "/api/index" },
+    { "source": "/health", "destination": "/api/index" },
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
