@@ -20,6 +20,7 @@ import {
   Check,
   Link2,
   Dices,
+  Loader2,
 } from "lucide-react";
 
 import Logo from "../components/Logo";
@@ -43,10 +44,10 @@ import {
   generateBuilderTitle,
 } from "../lib/constants";
 
-const emptySquadMember = () => ({
+const emptySquadMember = (defaultRole = "Builder") => ({
   id: generateId(),
   name: "",
-  role: "Builder",
+  role: defaultRole,
   stack: "",
   title: "",
   photo: null,
@@ -64,10 +65,10 @@ const Landing = () => {
   const [format, setFormat] = useState("card"); // "card" or "pfp"
   const [theme, setTheme] = useState("ocean"); // "ocean", "sunset", "forest", "cyber"
 
-  // SOLO State
-  const [name, setName] = useState("Aarav Sharma");
+  // SOLO State (Start with empty fields and clear placeholders)
+  const [name, setName] = useState("");
   const [role, setRole] = useState("Builder");
-  const [stack, setStack] = useState("Fullstack");
+  const [stack, setStack] = useState("");
   const [customTitle, setCustomTitle] = useState("");
   const [photo, setPhoto] = useState(null);
   const [zoom, setZoom] = useState(1.0);
@@ -77,29 +78,11 @@ const Landing = () => {
   const [isUploadingX, setIsUploadingX] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState("");
 
-  // SQUAD State
-  const [teamName, setTeamName] = useState("The Pixel Pirates");
+  // SQUAD State (Start with empty fields and clear placeholders)
+  const [teamName, setTeamName] = useState("");
   const [squadMembers, setSquadMembers] = useState([
-    {
-      id: generateId(),
-      name: "Aarav Sharma",
-      role: "Builder",
-      stack: "Fullstack",
-      title: "",
-      photo: null,
-      zoom: 1,
-      pan: { x: 0, y: 0 },
-    },
-    {
-      id: generateId(),
-      name: "Riya Patel",
-      role: "Designer",
-      stack: "UI/UX",
-      title: "",
-      photo: null,
-      zoom: 1,
-      pan: { x: 0, y: 0 },
-    },
+    emptySquadMember("Builder"),
+    emptySquadMember("Designer"),
   ]);
 
   const fileInputRef = useRef(null);
@@ -136,15 +119,11 @@ const Landing = () => {
     if (customTitle && customTitle.trim()) {
       return customTitle.trim().toUpperCase();
     }
-    return generateBuilderTitle(stack, role, name);
+    return generateBuilderTitle(stack || role, role, name || "BUILDER");
   }, [customTitle, stack, role, name]);
 
   const handleRoleChange = (newRole) => {
     setRole(newRole);
-    // If stack was the previous role or default, clean it up so new role title generates immediately
-    if (!stack || stack.toLowerCase() === role.toLowerCase()) {
-      setStack(newRole === "Builder" ? "Fullstack" : newRole);
-    }
   };
 
   const handlePhotoUpload = (e) => {
@@ -212,77 +191,99 @@ const Landing = () => {
     setTimeout(() => setCopiedStatus(""), 2500);
   };
 
-  // Print just the clean card graphic
+  // Print ONLY the card graphic using an isolated iframe
   const handlePrintCard = () => {
     const canvas = cardCanvasRef.current?.getCanvas?.();
-    if (!canvas) {
-      window.print();
-      return;
-    }
+    if (!canvas) return;
     const dataUrl = canvas.toDataURL("image/png");
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      window.print();
-      return;
+
+    let iframe = document.getElementById("hhg-print-frame");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "hhg-print-frame";
+      iframe.style.position = "fixed";
+      iframe.style.top = "-9999px";
+      iframe.style.left = "-9999px";
+      iframe.style.width = "1px";
+      iframe.style.height = "1px";
+      iframe.style.border = "none";
+      document.body.appendChild(iframe);
     }
-    printWindow.document.write(`
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Print Card — Hacker House Goa 2026</title>
+          <title>HH Goa 2026 Pass - ${name || builderId}</title>
           <style>
-            body { margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; }
-            img { max-width: 100%; max-height: 95vh; object-fit: contain; }
-            @media print { body { padding: 0; } img { max-width: 100%; } }
+            @page { size: auto; margin: 0mm; }
+            html, body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; }
+            img { max-width: 90vw; max-height: 95vh; object-fit: contain; }
           </style>
         </head>
         <body>
-          <img src="${dataUrl}" onload="window.print();window.close();" />
+          <img src="${dataUrl}" onload="window.print();" />
         </body>
       </html>
     `);
-    printWindow.document.close();
+    doc.close();
   };
 
-  // Cloudinary + Twitter intent
+  // Cloudinary Upload + Twitter Intent with image URL
   const handleShareToX = async () => {
     const canvas = cardCanvasRef.current?.getCanvas?.();
     if (!canvas) return;
 
+    const cloudName =
+      import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "le7lnbsq";
+    const uploadPreset =
+      import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "hhg_server";
+
+    setIsUploadingX(true);
+
     try {
-      setIsUploadingX(true);
-      const dataUrl = canvas.toDataURL("image/png", 0.95);
+      // Compress canvas to lightweight high-quality JPEG for ultra-fast upload (<400ms)
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.90);
       const formData = new FormData();
       formData.append("file", dataUrl);
-      formData.append("upload_preset", "hhg_server");
+      formData.append("upload_preset", uploadPreset);
 
       const res = await fetch(
-        "https://api.cloudinary.com/v1_1/le7lnbsq/image/upload",
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         { method: "POST", body: formData }
       );
 
       const data = await res.json();
       const imageUrl = data?.secure_url || "";
-      openTwitter(imageUrl);
+
+      const tweetText = encodeURIComponent(
+        `Check out my Hacker House Goa 2026 ${
+          format === "pfp" ? "PFP" : "Builder ID"
+        } (${builderId})! 🌴💻 #FrameInGoa`
+      );
+      const urlParam = imageUrl ? `&url=${encodeURIComponent(imageUrl)}` : "";
+      window.open(
+        `https://twitter.com/intent/tweet?text=${tweetText}${urlParam}`,
+        "_blank"
+      );
     } catch (err) {
-      console.warn("Cloudinary upload fallback to direct tweet intent", err);
-      openTwitter("");
+      console.warn("Cloudinary upload failed, opening tweet with site URL", err);
+      const tweetText = encodeURIComponent(
+        `Check out my Hacker House Goa 2026 ${
+          format === "pfp" ? "PFP" : "Builder ID"
+        } (${builderId})! 🌴💻 #FrameInGoa`
+      );
+      window.open(
+        `https://twitter.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(
+          window.location.href
+        )}`,
+        "_blank"
+      );
     } finally {
       setIsUploadingX(false);
     }
-  };
-
-  const openTwitter = (imageUrl) => {
-    const text = encodeURIComponent(
-      `Check out my Hacker House Goa 2026 ${
-        format === "pfp" ? "PFP" : "Builder ID"
-      } (${builderId})! 🌴💻 #FrameInGoa`
-    );
-    const urlParam = imageUrl ? `&url=${encodeURIComponent(imageUrl)}` : "";
-    window.open(
-      `https://twitter.com/intent/tweet?text=${text}${urlParam}`,
-      "_blank"
-    );
   };
 
   // Squad helpers
@@ -302,7 +303,7 @@ const Landing = () => {
 
   const handleShareSquadToX = () => {
     const text = encodeURIComponent(
-      `We're ready for Hacker House Goa 2026! 🌴💻 Squad: ${teamName} (${squadMembers.length} builders) #FrameInGoa`
+      `We're ready for Hacker House Goa 2026! 🌴💻 Squad: ${teamName || "Our Squad"} (${squadMembers.length} builders) #FrameInGoa`
     );
     window.open(
       `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(
@@ -573,24 +574,24 @@ const Landing = () => {
                   <div className="chip chip-pink">
                     SOLO BUILDER DETAILS
                   </div>
-                  {/* Unique ID Badge with Roll button */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-[10px] font-bold text-hh-green-deep/70">
-                      PASS ID:
-                    </span>
-                    <input
-                      type="text"
-                      value={builderId}
-                      onChange={(e) => setBuilderId(e.target.value.toUpperCase())}
-                      className="w-24 bg-white/80 border border-hh-green-deep rounded px-1.5 py-0.5 font-mono text-[11px] font-bold text-hh-green-deep text-center focus:outline-none"
-                    />
+
+                  {/* Read-Only Unique ID Badge with Roll Button */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 bg-white/90 border-2 border-hh-pink rounded-lg px-2.5 py-1">
+                      <span className="font-mono text-[9px] font-bold text-hh-green-deep/70">
+                        PASS ID:
+                      </span>
+                      <span className="font-mono text-xs font-black text-hh-green-deep tracking-wider select-all">
+                        {builderId}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={rollNewId}
-                      className="p-1 rounded bg-hh-yellow border border-hh-green-deep text-hh-green-deep hover:bg-hh-yellow-soft"
-                      title="Roll new unique ID & Barcode"
+                      className="px-2 py-1 rounded-lg bg-hh-yellow border-2 border-hh-green-deep text-hh-green-deep hover:bg-hh-yellow-soft flex items-center gap-1 font-mono text-[9px] font-bold transition-transform active:scale-95"
+                      title="Generate new unique ID & Barcode"
                     >
-                      <Dices className="w-3.5 h-3.5" />
+                      <Dices className="w-3.5 h-3.5" /> ROLL ID
                     </button>
                   </div>
                 </div>
@@ -605,8 +606,8 @@ const Landing = () => {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Your Name (e.g. Aarav Sharma)"
-                      className="mt-1 w-full bg-transparent border-2 border-hh-green-deep rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep placeholder:text-hh-green-deep/40 focus:outline-none focus:border-hh-pink font-bold"
+                      placeholder="e.g. Aarav Sharma"
+                      className="mt-1 w-full bg-white/90 border-2 border-hh-pink rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep placeholder:text-hh-green-deep/40 focus:outline-none focus:ring-2 focus:ring-hh-pink font-bold"
                     />
                   </div>
 
@@ -620,7 +621,7 @@ const Landing = () => {
                         <select
                           value={role}
                           onChange={(e) => handleRoleChange(e.target.value)}
-                          className="mt-1 w-full appearance-none bg-transparent border-2 border-hh-green-deep rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep focus:outline-none focus:border-hh-pink font-bold cursor-pointer"
+                          className="mt-1 w-full appearance-none bg-white/90 border-2 border-hh-pink rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep focus:outline-none focus:ring-2 focus:ring-hh-pink font-bold cursor-pointer"
                         >
                           {MOCK_ROLES.map((r) => (
                             <option key={r} value={r}>
@@ -641,13 +642,13 @@ const Landing = () => {
                         value={stack}
                         onChange={(e) => setStack(e.target.value)}
                         placeholder="e.g. Fullstack, Rust, AI, Solana"
-                        className="mt-1 w-full bg-transparent border-2 border-hh-green-deep rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep placeholder:text-hh-green-deep/40 focus:outline-none focus:border-hh-pink font-bold"
+                        className="mt-1 w-full bg-white/90 border-2 border-hh-pink rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep placeholder:text-hh-green-deep/40 focus:outline-none focus:ring-2 focus:ring-hh-pink font-bold"
                       />
                     </div>
                   </div>
 
                   {/* Dynamic Auto-Generated Builder Title Banner */}
-                  <div className="p-3.5 bg-hh-green-deep/10 border-2 border-dashed border-hh-green-deep/40 rounded-xl">
+                  <div className="p-3.5 bg-hh-green-deep/10 border-2 border-dashed border-hh-pink rounded-xl">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="font-mono text-[10px] font-bold tracking-widest text-hh-pink flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5" /> DYNAMIC BUILDER TITLE
@@ -665,7 +666,7 @@ const Landing = () => {
                     </div>
 
                     {!isEditingCustomTitle ? (
-                      <div className="font-mono text-xs font-bold text-hh-green-deep bg-hh-yellow/40 px-3 py-2 rounded-lg border border-hh-green-deep/30 flex items-center justify-between">
+                      <div className="font-mono text-xs font-bold text-hh-green-deep bg-hh-yellow/40 px-3 py-2 rounded-lg border-2 border-hh-pink flex items-center justify-between">
                         <span>{effectiveTitle}</span>
                         <span className="chip chip-pink text-[7px] py-0.5 px-1.5">
                           {role.toUpperCase()}
@@ -677,7 +678,7 @@ const Landing = () => {
                         value={customTitle}
                         onChange={(e) => setCustomTitle(e.target.value)}
                         placeholder={`e.g. ${effectiveTitle}`}
-                        className="w-full bg-white/80 border border-hh-green-deep rounded px-2.5 py-1.5 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:border-hh-pink"
+                        className="w-full bg-white/90 border-2 border-hh-pink rounded px-2.5 py-1.5 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:ring-1 focus:ring-hh-pink"
                       />
                     )}
                   </div>
@@ -697,7 +698,7 @@ const Landing = () => {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="mt-1 w-full border-2 border-dashed border-hh-green-deep rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-hh-yellow/30 transition-colors"
+                      className="mt-1 w-full border-2 border-dashed border-hh-pink bg-white/40 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-hh-yellow/30 transition-colors"
                     >
                       {photo ? (
                         <>
@@ -712,7 +713,7 @@ const Landing = () => {
                         </>
                       ) : (
                         <>
-                          <Upload className="w-6 h-6 text-hh-green-deep" />
+                          <Upload className="w-6 h-6 text-hh-pink" />
                           <span className="font-mono text-[11px] text-hh-green-deep font-bold">
                             Click or drop your photo here
                           </span>
@@ -746,7 +747,7 @@ const Landing = () => {
                         format={format}
                         name={name || "UNNAMED BUILDER"}
                         role={role}
-                        stack={stack}
+                        stack={stack || `${role} BUILDER`}
                         title={effectiveTitle}
                         photo={photo}
                         zoom={zoom}
@@ -812,7 +813,7 @@ const Landing = () => {
                   </div>
 
                   {/* Complete Export Actions Directly on the Same Page Below Card */}
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-4 space-y-2.5">
                     <button
                       type="button"
                       onClick={handleDownloadPng}
@@ -825,32 +826,41 @@ const Landing = () => {
                       type="button"
                       onClick={handleShareToX}
                       disabled={isUploadingX}
-                      className="w-full py-2.5 rounded-md flex items-center justify-center gap-2 text-xs font-black uppercase text-[#07170E] shadow-[3px_3px_0_#0a3d24] transition-transform hover:translate-y-[-1px] disabled:opacity-50"
+                      className="w-full py-2.5 rounded-md flex items-center justify-center gap-2 text-xs font-black uppercase text-[#07170E] shadow-[3px_3px_0_#0a3d24] transition-transform hover:translate-y-[-1px] disabled:opacity-60"
                       style={{
                         background:
                           "linear-gradient(90deg, #F5DC3E 0%, #EA3378 100%)",
                       }}
                     >
-                      <Share2 className="w-3.5 h-3.5" />
-                      {isUploadingX ? "UPLOADING TO X..." : "SHARE TO X ↗"}
+                      {isUploadingX ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          UPLOADING TO X...
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="w-3.5 h-3.5" />
+                          SHARE TO X ↗
+                        </>
+                      )}
                     </button>
 
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={handleCopyImage}
-                        className="btn-outline py-2 rounded-md flex items-center justify-center gap-1.5 text-xs text-hh-green-deep border-hh-green-deep hover:bg-hh-green-deep hover:text-hh-cream font-bold"
+                        className="bg-white border-2 border-hh-green-deep text-hh-green-deep py-2 rounded-md flex items-center justify-center gap-1.5 text-xs font-bold hover:bg-hh-yellow transition-all shadow-[2px_2px_0_#0a3d24]"
                       >
                         <Copy className="w-3.5 h-3.5" />
                         {copiedStatus === "copied-image"
-                          ? "COPIED!"
+                          ? "IMAGE COPIED!"
                           : "COPY IMAGE"}
                       </button>
 
                       <button
                         type="button"
                         onClick={handlePrintCard}
-                        className="btn-outline py-2 rounded-md flex items-center justify-center gap-1.5 text-xs text-hh-green-deep border-hh-green-deep hover:bg-hh-green-deep hover:text-hh-cream font-bold"
+                        className="bg-white border-2 border-hh-green-deep text-hh-green-deep py-2 rounded-md flex items-center justify-center gap-1.5 text-xs font-bold hover:bg-hh-yellow transition-all shadow-[2px_2px_0_#0a3d24]"
                       >
                         <Printer className="w-3.5 h-3.5" /> PRINT CARD
                       </button>
@@ -859,7 +869,7 @@ const Landing = () => {
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="w-full py-1 font-mono text-[10px] tracking-widest text-hh-green-deep/70 hover:text-hh-green-deep flex items-center justify-center gap-1"
+                      className="w-full py-1 font-mono text-[10px] tracking-widest text-hh-green-deep/80 hover:text-hh-green-deep flex items-center justify-center gap-1 font-bold"
                     >
                       <Link2 className="w-3 h-3" />
                       {copiedStatus === "copied-link"
@@ -890,7 +900,7 @@ const Landing = () => {
                       value={teamName}
                       onChange={(e) => setTeamName(e.target.value)}
                       placeholder="e.g. The Pixel Pirates"
-                      className="mt-1 w-full bg-transparent border-2 border-hh-green-deep rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep placeholder:text-hh-green-deep/40 focus:outline-none focus:border-hh-pink font-bold"
+                      className="mt-1 w-full bg-white/90 border-2 border-hh-pink rounded-md px-3 py-2 font-mono text-sm text-hh-green-deep placeholder:text-hh-green-deep/40 focus:outline-none focus:ring-2 focus:ring-hh-pink font-bold"
                     />
                   </div>
 
@@ -906,7 +916,7 @@ const Landing = () => {
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="btn-outline px-3 py-2.5 rounded-md text-xs text-hh-green-deep border-hh-green-deep hover:bg-hh-green-deep hover:text-hh-cream font-bold flex items-center gap-1"
+                      className="bg-white border-2 border-hh-green-deep text-hh-green-deep px-3 py-2.5 rounded-md text-xs hover:bg-hh-yellow font-bold flex items-center gap-1 shadow-[2px_2px_0_#0a3d24]"
                     >
                       <Printer className="w-4 h-4" /> PRINT SHEET
                     </button>
@@ -991,9 +1001,9 @@ const SquadMemberCard = ({
   const squadTitle = useMemo(() => {
     return (
       member.title ||
-      generateBuilderTitle(member.stack, member.role, member.name)
+      generateBuilderTitle(member.stack || member.role, member.role, member.name || `BUILDER ${index + 1}`)
     );
-  }, [member.title, member.stack, member.role, member.name]);
+  }, [member.title, member.stack, member.role, member.name, index]);
 
   const rollMemberId = () => {
     onChange({ id: generateId() });
@@ -1015,7 +1025,7 @@ const SquadMemberCard = ({
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.download = `${teamName.replace(/\s+/g, "_")}-${member.name || `member_${index + 1}`}-${member.id}.png`;
+      link.download = `${(teamName || "squad").replace(/\s+/g, "_")}-${member.name || `member_${index + 1}`}-${member.id}.png`;
       link.href = url;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1500);
@@ -1029,16 +1039,16 @@ const SquadMemberCard = ({
           <span className="chip chip-pink text-[9px]">
             MEMBER {String(index + 1).padStart(2, "0")}
           </span>
-          <span className="font-mono text-[9px] text-hh-green-deep/80 font-bold">
+          <span className="font-mono text-[9px] text-hh-green-deep/80 font-black tracking-wider select-all">
             {member.id}
           </span>
           <button
             type="button"
             onClick={rollMemberId}
-            className="p-0.5 rounded bg-hh-yellow border border-hh-green-deep text-hh-green-deep hover:bg-hh-yellow-soft"
-            title="Roll new unique ID & Barcode"
+            className="p-1 rounded bg-hh-yellow border border-hh-green-deep text-hh-green-deep hover:bg-hh-yellow-soft flex items-center gap-1 font-mono text-[8px] font-bold"
+            title="Generate new unique ID & Barcode"
           >
-            <Dices className="w-3 h-3" />
+            <Dices className="w-3 h-3" /> ROLL
           </button>
         </div>
         {canRemove && (
@@ -1064,7 +1074,7 @@ const SquadMemberCard = ({
               value={member.name}
               onChange={(e) => onChange({ name: e.target.value })}
               placeholder="e.g. Aarav Sharma"
-              className="mt-0.5 w-full bg-transparent border-2 border-hh-green-deep rounded-md px-2.5 py-1 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:border-hh-pink"
+              className="mt-0.5 w-full bg-white/90 border-2 border-hh-pink rounded-md px-2.5 py-1 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:ring-1 focus:ring-hh-pink"
             />
           </div>
 
@@ -1079,12 +1089,9 @@ const SquadMemberCard = ({
                   const newRole = e.target.value;
                   onChange({
                     role: newRole,
-                    stack:
-                      member.stack ||
-                      (newRole === "Builder" ? "Fullstack" : newRole),
                   });
                 }}
-                className="mt-0.5 w-full bg-transparent border-2 border-hh-green-deep rounded-md px-2 py-1 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:border-hh-pink cursor-pointer"
+                className="mt-0.5 w-full bg-white/90 border-2 border-hh-pink rounded-md px-2 py-1 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:ring-1 focus:ring-hh-pink cursor-pointer"
               >
                 {MOCK_ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -1101,8 +1108,8 @@ const SquadMemberCard = ({
                 type="text"
                 value={member.stack}
                 onChange={(e) => onChange({ stack: e.target.value })}
-                placeholder="Rust, React"
-                className="mt-0.5 w-full bg-transparent border-2 border-hh-green-deep rounded-md px-2.5 py-1 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:border-hh-pink"
+                placeholder="e.g. Rust, React"
+                className="mt-0.5 w-full bg-white/90 border-2 border-hh-pink rounded-md px-2.5 py-1 font-mono text-xs text-hh-green-deep font-bold focus:outline-none focus:ring-1 focus:ring-hh-pink"
               />
             </div>
           </div>
@@ -1119,15 +1126,15 @@ const SquadMemberCard = ({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="flex-1 border border-dashed border-hh-green-deep rounded py-1.5 font-mono text-[9px] font-bold text-hh-green-deep hover:bg-hh-yellow/30 flex items-center justify-center gap-1"
+                className="flex-1 border-2 border-dashed border-hh-pink rounded py-1.5 font-mono text-[9px] font-bold text-hh-green-deep hover:bg-hh-yellow/30 flex items-center justify-center gap-1 bg-white/40"
               >
-                <Upload className="w-3 h-3" />
+                <Upload className="w-3 h-3 text-hh-pink" />
                 {member.photo ? "CHANGE PHOTO" : "UPLOAD PHOTO"}
               </button>
               <button
                 type="button"
                 onClick={handleDownloadSingle}
-                className="px-2.5 py-1.5 bg-hh-yellow border border-hh-green-deep rounded text-hh-green-deep font-mono text-[9px] font-bold hover:bg-hh-yellow-soft flex items-center gap-1"
+                className="px-2.5 py-1.5 bg-hh-yellow border-2 border-hh-green-deep rounded text-hh-green-deep font-mono text-[9px] font-bold hover:bg-hh-yellow-soft flex items-center gap-1"
                 title="Download single card"
               >
                 <Download className="w-3 h-3" />
@@ -1144,7 +1151,7 @@ const SquadMemberCard = ({
               format={format}
               name={member.name || `BUILDER ${index + 1}`}
               role={member.role}
-              stack={member.stack || member.role}
+              stack={member.stack || `${member.role} BUILDER`}
               title={squadTitle}
               photo={member.photo}
               zoom={member.zoom || 1}

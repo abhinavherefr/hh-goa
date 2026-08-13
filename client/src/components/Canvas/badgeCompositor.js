@@ -279,7 +279,7 @@ export function renderBuilderCard(
   ctx.restore();
 
   // 7. Builder Name
-  const displayName = (name || "UNNAMED BUILDER").trim().toUpperCase();
+  const displayName = (name || "YOUR NAME").trim().toUpperCase();
   const nameY = photoY + photoSize + 40;
 
   ctx.save();
