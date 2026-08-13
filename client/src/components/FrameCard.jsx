@@ -52,6 +52,7 @@ const FrameCard = forwardRef(function FrameCard(
     pan = { x: 0, y: 0 },
     onPanChange,
     theme = "ocean",
+    builderId = "HH-26-0983",
     className = "",
     thumb = false,
   },
@@ -120,6 +121,7 @@ const FrameCard = forwardRef(function FrameCard(
         fields={{ name, stack: stack || role, builderTitle: title || undefined }}
         theme={theme}
         role={role}
+        builderId={builderId}
       />
     </div>
   );

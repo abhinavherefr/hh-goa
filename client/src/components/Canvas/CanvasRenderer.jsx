@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import JsBarcode from "jsbarcode";
 import { renderPfpFrame, PFP_SIZE } from "./frameCompositor";
 import { renderBuilderCard, CARD_W, CARD_H } from "./badgeCompositor";
 
@@ -16,11 +17,13 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     fields = {},
     theme = "ocean",
     role = "BUILDER",
+    builderId = "HH-26-0983",
   },
   ref
 ) {
   const canvasRef = useRef(null);
   const [bgImage, setBgImage] = useState(null);
+  const [barcodeImage, setBarcodeImage] = useState(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   const dims =
@@ -32,29 +35,58 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     getCanvas: () => canvasRef.current,
   }));
 
-  // Attempt to load custom background image from /backgrounds/card-bg.png or /goa-bg.png
+  // Load custom background image from candidate paths
   useEffect(() => {
     let cancelled = false;
-    const bg1 = new Image();
-    bg1.onload = () => {
-      if (!cancelled) setBgImage(bg1);
-    };
-    bg1.onerror = () => {
-      const bg2 = new Image();
-      bg2.onload = () => {
-        if (!cancelled) setBgImage(bg2);
+    const paths = [
+      "/backgrounds/goa-bg.png",
+      "/backgrounds/card-bg.png",
+      "/background/goa-bg.png",
+      "/background/card-bg.png",
+      "/goa-bg.png",
+      "/card-bg.png",
+    ];
+
+    let currentIdx = 0;
+    const tryNext = () => {
+      if (currentIdx >= paths.length || cancelled) return;
+      const img = new Image();
+      img.onload = () => {
+        if (!cancelled) setBgImage(img);
       };
-      bg2.onerror = () => {
-        if (!cancelled) setBgImage(null);
+      img.onerror = () => {
+        currentIdx++;
+        tryNext();
       };
-      bg2.src = "/goa-bg.png";
+      img.src = paths[currentIdx];
     };
-    bg1.src = "/backgrounds/card-bg.png";
+
+    tryNext();
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Generate scannable verification barcode
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    try {
+      const codeValue = (builderId || "HH-26-0983").toUpperCase().trim();
+      JsBarcode(canvas, codeValue, {
+        format: "CODE128",
+        width: 2.2,
+        height: 48,
+        displayValue: false,
+        margin: 6,
+        background: "#FFFDF8",
+        lineColor: "#0C1711",
+      });
+      setBarcodeImage(canvas);
+    } catch {
+      setBarcodeImage(null);
+    }
+  }, [builderId]);
 
   // Wait for web fonts if available
   useEffect(() => {
@@ -73,6 +105,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       renderBuilderCard(ctx, {
         image,
         bgImage,
+        barcodeImage,
+        uniqueId: builderId || "HH-26-0983",
         ...transform,
         ...fields,
         theme,
@@ -90,6 +124,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     format,
     image,
     bgImage,
+    barcodeImage,
+    builderId,
     transform,
     fields,
     fontsLoaded,

@@ -13,13 +13,16 @@ export const CARD_W = 720;
 export const CARD_H = 1080;
 
 /**
- * Renders the official Hacker House Goa 2026 Builder Pass Card matching the screenshot design.
+ * Renders the official Hacker House Goa 2026 Builder Pass Card matching the screenshot design,
+ * with low-opacity background image support and a scannable verification barcode.
  */
 export function renderBuilderCard(
   ctx,
   {
     image,
     bgImage = null,
+    barcodeImage = null,
+    uniqueId = "HH-26-0983",
     zoom = 1,
     offsetX = 0,
     offsetY = 0,
@@ -86,10 +89,10 @@ export function renderBuilderCard(
   ctx.fillStyle = cardGrad;
   ctx.fillRect(innerX, innerY, innerW, innerH);
 
-  // 2b. Custom Background Image with Low Opacity (if provided)
+  // 2b. Custom Background Image with Low Opacity (Subtle texture layer)
   if (bgImage && bgImage.width) {
     ctx.save();
-    ctx.globalAlpha = 0.14; // Low opacity background overlay
+    ctx.globalAlpha = 0.5; // Low opacity background overlay
     drawImageCover(ctx, bgImage, {
       x: innerX,
       y: innerY,
@@ -161,7 +164,7 @@ export function renderBuilderCard(
   ctx.fill();
 
   // 5. Header: Logo (Left) and Pass Details (Right)
-  const headerY = innerY + 76;
+  const headerY = innerY + 74;
 
   // --- Top-Left: "HACKER HOUSE" with "गोवा" overlay ---
   ctx.save();
@@ -187,8 +190,8 @@ export function renderBuilderCard(
   // Subtle code watermark below logo
   ctx.fillStyle = "rgba(247, 243, 232, 0.28)";
   ctx.font = `500 11px ${FONT_STACK_MONO}`;
-  ctx.fillText("// build in goa", innerX + 44, headerY + 120);
-  ctx.fillText("const builder = true;", innerX + 44, headerY + 138);
+  ctx.fillText("// build in goa", innerX + 44, headerY + 118);
+  ctx.fillText("const builder = true;", innerX + 44, headerY + 134);
   ctx.restore();
 
   // --- Top-Right: Pass Level + 2026 + Location ---
@@ -222,10 +225,10 @@ export function renderBuilderCard(
   ctx.restore();
 
   // 6. Central Photo Frame
-  const photoSize = 360;
+  const photoSize = 340;
   const photoX = (W - photoSize) / 2;
-  const photoY = headerY + 175;
-  const photoRadius = 28;
+  const photoY = headerY + 165;
+  const photoRadius = 26;
 
   ctx.save();
   // Outer subtle ambient glow
@@ -277,11 +280,11 @@ export function renderBuilderCard(
 
   // 7. Builder Name
   const displayName = (name || "UNNAMED BUILDER").trim().toUpperCase();
-  const nameY = photoY + photoSize + 48;
+  const nameY = photoY + photoSize + 40;
 
   ctx.save();
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `900 36px ${FONT_STACK_SANS}`;
+  ctx.font = `900 34px ${FONT_STACK_SANS}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.letterSpacing = "1.5px";
@@ -289,7 +292,7 @@ export function renderBuilderCard(
   ctx.restore();
 
   // 8. Stack & Builder Title Section
-  const metaY = nameY + 54;
+  const metaY = nameY + 44;
   const displayStack = (stack || `${role} BUILDER`).trim().toUpperCase();
   const resolvedTitle = (
     builderTitle || generateBuilderTitle(stack, role, name)
@@ -300,33 +303,102 @@ export function renderBuilderCard(
   ctx.strokeStyle = "rgba(247, 243, 232, 0.18)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(innerX + 80, metaY - 14);
-  ctx.lineTo(innerX + innerW - 80, metaY - 14);
+  ctx.moveTo(innerX + 80, metaY - 12);
+  ctx.lineTo(innerX + innerW - 80, metaY - 12);
   ctx.stroke();
 
   // STACK label
   ctx.fillStyle = "rgba(247, 243, 232, 0.6)";
-  ctx.font = `700 11px ${FONT_STACK_MONO}`;
+  ctx.font = `700 10px ${FONT_STACK_MONO}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.letterSpacing = "2px";
-  ctx.fillText("STACK", W / 2, metaY - 14);
+  ctx.fillText("STACK", W / 2, metaY - 12);
 
   // Stack/Role line (Yellow)
   ctx.fillStyle = themeObj.accent1 || "#F5DC3E";
-  ctx.font = `900 16px ${FONT_STACK_SANS}`;
+  ctx.font = `900 15px ${FONT_STACK_SANS}`;
   ctx.letterSpacing = "1.5px";
-  ctx.fillText(displayStack, W / 2, metaY + 10);
+  ctx.fillText(displayStack, W / 2, metaY + 8);
 
   // Generated / Custom Title (Pink / Magenta)
   ctx.fillStyle = themeObj.accent2 || "#EA3378";
-  ctx.font = `900 18px ${FONT_STACK_SANS}`;
-  ctx.letterSpacing = "1px";
-  ctx.fillText(resolvedTitle, W / 2, metaY + 36);
+  ctx.font = `900 17px ${FONT_STACK_SANS}`;
+  ctx.letterSpacing = "0.8px";
+  ctx.fillText(resolvedTitle, W / 2, metaY + 32);
   ctx.restore();
 
-  // 9. Footer: Dates, Beach Lab, #FrameInGoa & Waves
-  const footerY = innerY + innerH - 68;
+  // 9. Scannable Verification Barcode Plate
+  const barcodeCardW = 440;
+  const barcodeCardH = 105;
+  const barcodeCardX = (W - barcodeCardW) / 2;
+  const barcodeCardY = metaY + 60;
+
+  ctx.save();
+  // Barcode container shadow
+  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.beginPath();
+  ctx.roundRect(barcodeCardX + 4, barcodeCardY + 4, barcodeCardW, barcodeCardH, 14);
+  ctx.fill();
+
+  // Barcode plate body
+  ctx.fillStyle = "#FFFDF8";
+  ctx.beginPath();
+  ctx.roundRect(barcodeCardX, barcodeCardY, barcodeCardW, barcodeCardH, 14);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(10, 36, 25, 0.6)";
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Verification micro label at top of plate
+  ctx.fillStyle = "#5A665E";
+  ctx.font = `700 9px ${FONT_STACK_MONO}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.letterSpacing = "1.5px";
+  ctx.fillText("VERIFICATION BARCODE · SCAN TO VERIFY", W / 2, barcodeCardY + 8);
+
+  // Draw scannable barcode image or procedural high-contrast CODE128 bars
+  if (barcodeImage && barcodeImage.width) {
+    const bcW = Math.min(barcodeCardW - 40, barcodeImage.width * 1.5);
+    const bcH = 48;
+    const bcX = (W - bcW) / 2;
+    const bcY = barcodeCardY + 24;
+    ctx.drawImage(barcodeImage, bcX, bcY, bcW, bcH);
+  } else {
+    // Sharp procedural fallback CODE128 barcode stripes
+    const bcY = barcodeCardY + 24;
+    const bcH = 46;
+    const startX = barcodeCardX + 30;
+    const totalW = barcodeCardW - 60;
+
+    ctx.fillStyle = "#0C1711";
+    let curX = startX;
+    let seed = 12345;
+    for (let ci = 0; ci < uniqueId.length; ci++) {
+      seed = (seed * 9301 + uniqueId.charCodeAt(ci) * 49297) % 233280;
+    }
+    while (curX < startX + totalW) {
+      seed = (seed * 9301 + 49297) % 233280;
+      const barW = (seed % 3) + 2;
+      const space = (seed % 3) + 2;
+      ctx.fillRect(curX, bcY, barW, bcH);
+      curX += barW + space;
+    }
+  }
+
+  // Unique ID string below barcode
+  ctx.fillStyle = "#0C1711";
+  ctx.font = `900 13px ${FONT_STACK_MONO}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.letterSpacing = "2px";
+  ctx.fillText(uniqueId, W / 2, barcodeCardY + barcodeCardH - 7);
+  ctx.restore();
+
+  // 10. Footer: Dates, Beach Lab, #FrameInGoa & Waves
+  const footerY = innerY + innerH - 52;
 
   // Decorative wavy lines at bottom
   ctx.save();
@@ -334,11 +406,11 @@ export function renderBuilderCard(
   ctx.lineWidth = 1.5;
   for (let waveOffset = 0; waveOffset < 3; waveOffset++) {
     ctx.beginPath();
-    const wy = footerY - 36 + waveOffset * 10;
+    const wy = footerY - 26 + waveOffset * 8;
     ctx.moveTo(innerX + 44, wy);
     for (let wx = innerX + 44; wx <= innerX + innerW - 44; wx += 40) {
-      ctx.quadraticCurveTo(wx + 10, wy - 4, wx + 20, wy);
-      ctx.quadraticCurveTo(wx + 30, wy + 4, wx + 40, wy);
+      ctx.quadraticCurveTo(wx + 10, wy - 3, wx + 20, wy);
+      ctx.quadraticCurveTo(wx + 30, wy + 3, wx + 40, wy);
     }
     ctx.stroke();
   }
@@ -347,24 +419,24 @@ export function renderBuilderCard(
   ctx.save();
   // Bottom-Left: Dates + Location
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `700 13px ${FONT_STACK_MONO}`;
+  ctx.font = `700 12px ${FONT_STACK_MONO}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(BRAND.dates, innerX + 44, footerY);
   ctx.fillStyle = "rgba(247, 243, 232, 0.7)";
-  ctx.font = `500 11px ${FONT_STACK_MONO}`;
-  ctx.fillText(BRAND.location, innerX + 44, footerY + 18);
+  ctx.font = `500 10px ${FONT_STACK_MONO}`;
+  ctx.fillText(BRAND.location, innerX + 44, footerY + 16);
 
   // Bottom-Center: "BEACH LAB · SHIP LIVE"
   ctx.fillStyle = "rgba(247, 243, 232, 0.55)";
   ctx.font = `700 10px ${FONT_STACK_MONO}`;
   ctx.textAlign = "center";
   ctx.letterSpacing = "1px";
-  ctx.fillText(BRAND.subLocation, W / 2, footerY + 10);
+  ctx.fillText(BRAND.subLocation, W / 2, footerY + 8);
 
   // Bottom-Right: "#FrameInGoa"
   ctx.fillStyle = themeObj.accent1 || "#F5DC3E";
-  ctx.font = `900 20px ${FONT_STACK_SANS}`;
+  ctx.font = `900 18px ${FONT_STACK_SANS}`;
   ctx.textAlign = "right";
   ctx.letterSpacing = "0.5px";
   ctx.fillText(BRAND.hashtag, innerX + innerW - 44, footerY + 6);

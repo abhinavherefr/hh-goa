@@ -19,6 +19,7 @@ import {
   Edit3,
   Check,
   Link2,
+  Dices,
 } from "lucide-react";
 
 import Logo from "../components/Logo";
@@ -71,7 +72,7 @@ const Landing = () => {
   const [photo, setPhoto] = useState(null);
   const [zoom, setZoom] = useState(1.0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [builderId] = useState(generateId());
+  const [builderId, setBuilderId] = useState(generateId());
   const [isEditingCustomTitle, setIsEditingCustomTitle] = useState(false);
   const [isUploadingX, setIsUploadingX] = useState(false);
   const [copiedStatus, setCopiedStatus] = useState("");
@@ -125,6 +126,11 @@ const Landing = () => {
     builderSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Roll a new unique ID & barcode for solo builder
+  const rollNewId = () => {
+    setBuilderId(generateId());
+  };
+
   // Auto-generated builder title — dynamically updates whenever role, stack, or name changes
   const effectiveTitle = useMemo(() => {
     if (customTitle && customTitle.trim()) {
@@ -171,7 +177,7 @@ const Landing = () => {
       const link = document.createElement("a");
       const filename = `HHGOA26-${format.toUpperCase()}-${(name || "BUILDER")
         .replace(/[^a-zA-Z0-9]/g, "_")
-        .toLowerCase()}.png`;
+        .toLowerCase()}-${builderId}.png`;
       link.download = filename;
       link.href = url;
       link.click();
@@ -270,7 +276,7 @@ const Landing = () => {
     const text = encodeURIComponent(
       `Check out my Hacker House Goa 2026 ${
         format === "pfp" ? "PFP" : "Builder ID"
-      }! 🌴💻 #FrameInGoa`
+      } (${builderId})! 🌴💻 #FrameInGoa`
     );
     const urlParam = imageUrl ? `&url=${encodeURIComponent(imageUrl)}` : "";
     window.open(
@@ -563,8 +569,30 @@ const Landing = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left Column: Form & Customizer */}
               <div className="lg:col-span-7 bg-hh-cream text-hh-green-deep rounded-2xl p-6 border-2 border-hh-yellow shadow-[6px_6px_0_#0a3d24]">
-                <div className="chip chip-pink mb-4">
-                  SOLO BUILDER DETAILS
+                <div className="flex items-center justify-between mb-4">
+                  <div className="chip chip-pink">
+                    SOLO BUILDER DETAILS
+                  </div>
+                  {/* Unique ID Badge with Roll button */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-[10px] font-bold text-hh-green-deep/70">
+                      PASS ID:
+                    </span>
+                    <input
+                      type="text"
+                      value={builderId}
+                      onChange={(e) => setBuilderId(e.target.value.toUpperCase())}
+                      className="w-24 bg-white/80 border border-hh-green-deep rounded px-1.5 py-0.5 font-mono text-[11px] font-bold text-hh-green-deep text-center focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={rollNewId}
+                      className="p-1 rounded bg-hh-yellow border border-hh-green-deep text-hh-green-deep hover:bg-hh-yellow-soft"
+                      title="Roll new unique ID & Barcode"
+                    >
+                      <Dices className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -967,6 +995,10 @@ const SquadMemberCard = ({
     );
   }, [member.title, member.stack, member.role, member.name]);
 
+  const rollMemberId = () => {
+    onChange({ id: generateId() });
+  };
+
   const handlePhoto = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -983,7 +1015,7 @@ const SquadMemberCard = ({
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.download = `${teamName.replace(/\s+/g, "_")}-${member.name || `member_${index + 1}`}.png`;
+      link.download = `${teamName.replace(/\s+/g, "_")}-${member.name || `member_${index + 1}`}-${member.id}.png`;
       link.href = url;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1500);
@@ -997,9 +1029,17 @@ const SquadMemberCard = ({
           <span className="chip chip-pink text-[9px]">
             MEMBER {String(index + 1).padStart(2, "0")}
           </span>
-          <span className="font-mono text-[9px] text-hh-green-deep/60">
+          <span className="font-mono text-[9px] text-hh-green-deep/80 font-bold">
             {member.id}
           </span>
+          <button
+            type="button"
+            onClick={rollMemberId}
+            className="p-0.5 rounded bg-hh-yellow border border-hh-green-deep text-hh-green-deep hover:bg-hh-yellow-soft"
+            title="Roll new unique ID & Barcode"
+          >
+            <Dices className="w-3 h-3" />
+          </button>
         </div>
         {canRemove && (
           <button
@@ -1111,6 +1151,7 @@ const SquadMemberCard = ({
               pan={member.pan || { x: 0, y: 0 }}
               onPanChange={(p) => onChange({ pan: p })}
               theme={theme}
+              builderId={member.id}
               thumb
             />
           </div>
